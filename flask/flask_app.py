@@ -32,7 +32,8 @@ step_lock = threading.Lock()  # ensures thread-safe increments
 conn = sqlite3.connect("monitoring.db", check_same_thread=False)
 cursor = conn.cursor()
 
-cursor.execute("""
+cursor.execute(
+    """
 CREATE TABLE IF NOT EXISTS logs (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     timestamp TEXT,
@@ -41,9 +42,11 @@ CREATE TABLE IF NOT EXISTS logs (
     probability REAL,
     true_class INTEGER
 )
-""")
+"""
+)
 
-cursor.execute("""
+cursor.execute(
+    """
 CREATE TABLE IF NOT EXISTS batch_metrics (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     timestamp DATETIME DEFAULT CURRENT_TIMESTAMP,
@@ -54,9 +57,11 @@ CREATE TABLE IF NOT EXISTS batch_metrics (
     recall REAL,
     f1_score REAL
 )
-""")
+"""
+)
 
-cursor.execute("""
+cursor.execute(
+    """
 CREATE TABLE IF NOT EXISTS alerts (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     metric TEXT,
@@ -64,16 +69,19 @@ CREATE TABLE IF NOT EXISTS alerts (
     threshold REAL,
     timestamp DATETIME DEFAULT CURRENT_TIMESTAMP
 )
-""")
+"""
+)
 
-cursor.execute("""
+cursor.execute(
+    """
 CREATE TABLE IF NOT EXISTS actions (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     metric TEXT,
     action TEXT,
     timestamp DATETIME DEFAULT CURRENT_TIMESTAMP
 )
-""")
+"""
+)
 
 conn.commit()
 
@@ -84,6 +92,7 @@ ACCURACY_THRESHOLD = 0.90
 PRECISION_THRESHOLD = 0.75
 RECALL_THRESHOLD = 0.35
 LATENCY_THRESHOLD = 0.50  # seconds
+
 
 # -----------------------------
 # Prediction endpoint
@@ -136,11 +145,15 @@ def predict():
             lbl = labels[i]
             tc = None
             if true_class is not None:
-                tc = int(true_class[i]) if isinstance(true_class, list) else int(true_class)
+                tc = (
+                    int(true_class[i])
+                    if isinstance(true_class, list)
+                    else int(true_class)
+                )
 
             cursor.execute(
                 "INSERT INTO logs (timestamp, latency, prediction, probability, true_class) VALUES (?, ?, ?, ?, ?)",
-                (datetime.utcnow().isoformat(), latency, lbl, float(p), tc)
+                (datetime.utcnow().isoformat(), latency, lbl, float(p), tc),
             )
         conn.commit()
 
@@ -149,7 +162,7 @@ def predict():
         # -----------------------------
         df = pd.read_sql_query(
             "SELECT prediction, true_class, latency FROM logs WHERE true_class IS NOT NULL",
-            conn
+            conn,
         )
 
         if len(df) > 0:
@@ -162,17 +175,13 @@ def predict():
             f1 = f1_score(df["y_true"], df["y_pred"])
             avg_latency = df["latency"].mean()
 
-            cursor.execute("""
+            cursor.execute(
+                """
                 INSERT INTO batch_metrics (num_samples, avg_probability, accuracy, precision, recall, f1_score)
                 VALUES (?, ?, ?, ?, ?, ?)
-            """, (
-                len(data),
-                float(np.mean(probs)),
-                acc,
-                prec,
-                rec,
-                f1
-            ))
+            """,
+                (len(data), float(np.mean(probs)), acc, prec, rec, f1),
+            )
             conn.commit()
 
             # Alerts & actions
@@ -192,9 +201,14 @@ def predict():
                 actions.append("Check system performance / optimize latency.")
 
             for (metric, value, threshold), action in zip(alerts, actions):
-                cursor.execute("INSERT INTO alerts (metric, value, threshold) VALUES (?, ?, ?)",
-                               (metric, float(value), float(threshold)))
-                cursor.execute("INSERT INTO actions (metric, action) VALUES (?, ?)", (metric, action))
+                cursor.execute(
+                    "INSERT INTO alerts (metric, value, threshold) VALUES (?, ?, ?)",
+                    (metric, float(value), float(threshold)),
+                )
+                cursor.execute(
+                    "INSERT INTO actions (metric, action) VALUES (?, ?)",
+                    (metric, action),
+                )
             conn.commit()
 
             # TensorBoard logging
@@ -209,15 +223,14 @@ def predict():
                 tf.summary.scalar("avg_latency", avg_latency, step=step)
             writer.flush()
 
-        return jsonify({
-            "predictions": labels,
-            "probabilities": probs.tolist(),
-            "latency": latency
-        })
+        return jsonify(
+            {"predictions": labels, "probabilities": probs.tolist(), "latency": latency}
+        )
 
     except Exception as e:
         traceback.print_exc()
         return jsonify({"error": str(e)}), 500
+
 
 # -----------------------------
 # Run Flask

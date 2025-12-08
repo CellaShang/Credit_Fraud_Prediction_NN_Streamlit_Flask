@@ -20,10 +20,7 @@ default_values = (
     "0.405797,0.371406,1.251474,-1.716841,3.293063"
 )
 
-user_input = st.text_area(
-    "Paste 33 feature values separated by commas",
-    default_values
-)
+user_input = st.text_area("Paste 33 feature values separated by commas", default_values)
 
 true_class_input = st.selectbox("True class (optional)", options=[None, 0, 1])
 
@@ -79,7 +76,7 @@ if uploaded_file:
                     y = None
 
                 # Ensure numeric and float32
-                X = X.apply(pd.to_numeric, errors='coerce').dropna().astype(np.float32)
+                X = X.apply(pd.to_numeric, errors="coerce").dropna().astype(np.float32)
 
                 # Send entire batch in one request
                 payload = {"instances": X.values.tolist()}
@@ -105,7 +102,7 @@ if uploaded_file:
                         "Download Predictions as CSV",
                         data=csv,
                         file_name="fraud_predictions.csv",
-                        mime="text/csv"
+                        mime="text/csv",
                     )
             except Exception as e:
                 st.error(f"Error during batch prediction: {e}")
