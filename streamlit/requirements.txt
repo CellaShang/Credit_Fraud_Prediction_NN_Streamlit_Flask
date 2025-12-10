@@ -1,6 +1,7 @@
-streamlit==1.32.0  
+streamlit==1.18.1
 pandas==2.0.3
 numpy==1.26.4
 requests==2.31.0
 altair==4.2.2
 vega_datasets
+google-cloud-storage>=2.14

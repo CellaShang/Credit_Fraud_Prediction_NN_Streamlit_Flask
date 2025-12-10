@@ -1,19 +1,21 @@
-from flask import Flask, request, jsonify
-import tensorflow as tf
-import numpy as np
-import traceback
-import sqlite3, time
-from datetime import datetime
-import os
+import sqlite3
 import threading
+import time
+import traceback
+from datetime import datetime
+
+import numpy as np
 import pandas as pd
-from sklearn.metrics import accuracy_score, precision_score, recall_score, f1_score
+import requests
+import tensorflow as tf
+from sklearn.metrics import accuracy_score, f1_score, precision_score, recall_score
+
+from flask import Flask, jsonify, request
 
 # -----------------------------
-# Load SavedModel (TF native)
+# TF Serving endpoint
 # -----------------------------
-model = tf.saved_model.load("/app/models/saved_model")
-infer = model.signatures["serving_default"]
+TF_SERVING_URL = "https://fraud-serving-447240734112.us-central1.run.app/v1/models/fraud_model:predict"
 
 app = Flask(__name__)
 
@@ -130,12 +132,22 @@ def predict():
         if data.ndim == 1:
             data = data.reshape(1, -1)
 
-        # Measure latency
+        # -----------------------------
+        # Call TF Serving
+        # -----------------------------
         start = time.time()
-        outputs = infer(tf.constant(data))
-        probs = list(outputs.values())[0].numpy().flatten()
+        response = requests.post(
+            TF_SERVING_URL, json={"instances": data.tolist()}, timeout=10
+        )
         latency = time.time() - start
 
+        if response.status_code != 200:
+            return (
+                jsonify({"error": f"TF Serving request failed: {response.text}"}),
+                500,
+            )
+
+        probs = np.array(response.json().get("predictions", [])).flatten()
         labels = ["Fraud" if p > 0.5 else "Not Fraud" for p in probs]
 
         # -----------------------------
@@ -152,7 +164,11 @@ def predict():
                 )
 
             cursor.execute(
-                "INSERT INTO logs (timestamp, latency, prediction, probability, true_class) VALUES (?, ?, ?, ?, ?)",
+                """
+                INSERT INTO logs (
+                    timestamp, latency, prediction, probability, true_class
+                ) VALUES (?, ?, ?, ?, ?)
+                """,
                 (datetime.utcnow().isoformat(), latency, lbl, float(p), tc),
             )
         conn.commit()
@@ -161,7 +177,11 @@ def predict():
         # Compute aggregate metrics
         # -----------------------------
         df = pd.read_sql_query(
-            "SELECT prediction, true_class, latency FROM logs WHERE true_class IS NOT NULL",
+            """
+            SELECT prediction, true_class, latency
+            FROM logs
+            WHERE true_class IS NOT NULL
+            """,
             conn,
         )
 
@@ -177,9 +197,10 @@ def predict():
 
             cursor.execute(
                 """
-                INSERT INTO batch_metrics (num_samples, avg_probability, accuracy, precision, recall, f1_score)
-                VALUES (?, ?, ?, ?, ?, ?)
-            """,
+                INSERT INTO batch_metrics (
+                    num_samples, avg_probability, accuracy, precision, recall, f1_score
+                ) VALUES (?, ?, ?, ?, ?, ?)
+                """,
                 (len(data), float(np.mean(probs)), acc, prec, rec, f1),
             )
             conn.commit()
@@ -187,6 +208,7 @@ def predict():
             # Alerts & actions
             alerts = []
             actions = []
+
             if acc < ACCURACY_THRESHOLD:
                 alerts.append(("accuracy", acc, ACCURACY_THRESHOLD))
                 actions.append("Flag model as degraded due to low accuracy.")

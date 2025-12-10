@@ -1,16 +1,12 @@
-#!/bin/sh
-set -e
+#!/bin/bash
+# Force Streamlit to use Cloud Run's PORT
+PORT=${PORT:-8080}
 
-export PORT=${PORT:-8080}
-
-echo "Starting Streamlit on port $PORT..."
-
+# Disable CORS for Cloud Run and prevent telemetry popups
 exec streamlit run streamlit_app.py \
-    --server.address=0.0.0.0 \
     --server.port=$PORT \
-    --server.headless=true \
+    --server.address=0.0.0.0 \
     --server.enableCORS=false \
     --server.enableXsrfProtection=false \
-    --server.enableWebsocketCompression=false \
-    --server.fileWatcherType=none \
     --browser.gatherUsageStats=false
+

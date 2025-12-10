@@ -1,0 +1,10 @@
+venv/
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.env
+*.log
+.DS_Store
+.cache/
+.streamlit/config.toml    # keep this line REMOVE it if needed
