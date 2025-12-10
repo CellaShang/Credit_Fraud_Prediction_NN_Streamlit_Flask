@@ -58,6 +58,8 @@ jobs:
           credentials_json: ${{ secrets.GCP_SA_KEY }}
       - name: Configure GCP project
         run: gcloud config set project credit2025
+      - name: Authenticate Docker with Artifact Registry
+        run: gcloud auth configure-docker gcr.io --quiet
       - name: Build Flask Docker image
         run: make build-flask
       - name: Push Flask Docker image
@@ -83,6 +85,8 @@ jobs:
           credentials_json: ${{ secrets.GCP_SA_KEY }}
       - name: Configure GCP project
         run: gcloud config set project credit2025
+      - name: Authenticate Docker with Artifact Registry
+        run: gcloud auth configure-docker gcr.io --quiet
       - name: Build UI Docker image
         run: make build-ui
       - name: Push UI Docker image
@@ -108,6 +112,8 @@ jobs:
           credentials_json: ${{ secrets.GCP_SA_KEY }}
       - name: Configure GCP project
         run: gcloud config set project credit2025
+      - name: Authenticate Docker with Artifact Registry
+        run: gcloud auth configure-docker gcr.io --quiet
       - name: Build TF Serving Docker image
         run: make build-serving
       - name: Push TF Serving Docker image
@@ -133,6 +139,8 @@ jobs:
           credentials_json: ${{ secrets.GCP_SA_KEY }}
       - name: Configure GCP project
         run: gcloud config set project credit2025
+      - name: Authenticate Docker with Artifact Registry
+        run: gcloud auth configure-docker gcr.io --quiet
       - name: Build Tensorboard Docker image
         run: make build-tensorboard
       - name: Push Tensorboard Docker image
