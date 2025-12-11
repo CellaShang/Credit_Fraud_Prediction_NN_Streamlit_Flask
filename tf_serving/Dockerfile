@@ -1,17 +1,25 @@
 FROM tensorflow/serving:2.14.0
 
-# Environment variables
+# Model metadata
 ENV MODEL_NAME=fraud_model
-ENV MODEL_BASE_PATH=gs://credit2025-models/fraud_model
+ENV MODEL_BASE_PATH=/models
 
-# Cloud Run injects this
+# Copy locally saved_model into container
+COPY saved_model /models/fraud_model
+
+# Cloud Run port
 ENV PORT=${PORT:-8080}
-
 EXPOSE $PORT
 
+# Wait until model exists, then start TF Serving
 ENTRYPOINT ["sh", "-c", "\
-    tensorflow_model_server \
+  echo 'Waiting for model files...'; \
+  while [ ! -f ${MODEL_BASE_PATH}/${MODEL_NAME}/1/saved_model.pb ]; do \
+    sleep 2; \
+  done; \
+  echo 'Starting TensorFlow Serving...'; \
+  tensorflow_model_server \
     --rest_api_port=${PORT} \
     --model_name=${MODEL_NAME} \
-    --model_base_path=${MODEL_BASE_PATH} \
+    --model_base_path=${MODEL_BASE_PATH}/${MODEL_NAME} \
 "]

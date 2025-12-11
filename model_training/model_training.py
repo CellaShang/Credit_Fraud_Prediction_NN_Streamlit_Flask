@@ -11,33 +11,27 @@ Original file is located at
 # 1. Project Setup & Imports
 # ==============================
 
-from pathlib import Path
-import os
 import datetime
-import joblib
+import os
+from pathlib import Path
 
+import joblib
+import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
-import matplotlib.pyplot as plt
 import seaborn as sns
 
 !pip install opendatasets --quiet
 import opendatasets as od
+import tensorflow as tf
+from sklearn.metrics import (PrecisionRecallDisplay, RocCurveDisplay,
+                             classification_report, confusion_matrix,
+                             precision_recall_curve, roc_auc_score)
 from sklearn.model_selection import train_test_split
 from sklearn.preprocessing import StandardScaler
 from sklearn.utils import class_weight
-from sklearn.metrics import (
-    roc_auc_score,
-    precision_recall_curve,
-    classification_report,
-    confusion_matrix,
-    RocCurveDisplay,
-    PrecisionRecallDisplay,
-)
-
-import tensorflow as tf
-from tensorflow.keras import layers, models, optimizers, losses, metrics, callbacks
-
+from tensorflow.keras import (callbacks, layers, losses, metrics, models,
+                              optimizers)
 
 # -----------------------
 # Global configuration
@@ -98,8 +92,9 @@ print(f"Models directory:  {MODELS_DIR.resolve()}")
 # ========================================
 
 from pathlib import Path
-import pandas as pd
+
 import opendatasets as od
+import pandas as pd
 
 
 def download_creditcard_dataset(url: str, download_dir: Path) -> Path:
@@ -189,6 +184,7 @@ In this project, we build an **end-to-end TensorFlow pipeline** to detect fraudu
 # 4. Subsample for Faster Experimentation
 # ========================================
 from pathlib import Path
+
 import pandas as pd
 
 
@@ -267,9 +263,10 @@ print(f"\nSaved subsampled dataset to: {subset_path.resolve()}")
 # 5. Data Cleaning & Feature Engineering
 # ========================================
 
-import pandas as pd
-import numpy as np
 from pathlib import Path
+
+import numpy as np
+import pandas as pd
 
 
 def load_processed_subset(path: Path) -> pd.DataFrame:
@@ -383,11 +380,12 @@ df[["Amount", "log_amount", "Time", "hour", "is_night"]].head()
 # 6. Train/Val/Test Split + Scaling
 # ========================================
 
+from typing import List, Tuple
+
+import numpy as np
+import pandas as pd
 from sklearn.model_selection import train_test_split
 from sklearn.preprocessing import StandardScaler
-from typing import Tuple, List
-import pandas as pd
-import numpy as np
 
 
 def split_dataset(
@@ -511,6 +509,7 @@ X_train_scaled.head()
 # ========================================
 
 from pathlib import Path
+
 import joblib
 import pandas as pd
 
@@ -596,8 +595,9 @@ print("\nAll processed splits and scaler have been saved successfully.")
 # 8. TensorFlow Input Pipelines (tf.data)
 # ========================================
 
-import tensorflow as tf
 from typing import Optional, Tuple
+
+import tensorflow as tf
 
 tf.random.set_seed(SEED)
 
@@ -697,8 +697,9 @@ train_ds
 # 9. Baseline TensorFlow Model
 # ========================================
 
-from tensorflow.keras import layers, models, optimizers, losses, metrics
-from typing import Optional, Dict
+from typing import Dict, Optional
+
+from tensorflow.keras import layers, losses, metrics, models, optimizers
 
 
 def build_baseline_model(input_dim: int) -> tf.keras.Model:
@@ -797,8 +798,9 @@ baseline_history = train_baseline_model(
 # 10. Class Weights for Main Model
 # ========================================
 
-from sklearn.utils.class_weight import compute_class_weight
 from typing import Dict
+
+from sklearn.utils.class_weight import compute_class_weight
 
 
 def compute_class_weights(y: pd.Series) -> Dict[int, float]:
@@ -843,8 +845,9 @@ class_weights = compute_class_weights(y_train)
 # 11. Main Deep Neural Network Model
 # ========================================
 
-from tensorflow.keras import layers, models, optimizers, losses, metrics
-from typing import Tuple, Optional
+from typing import Optional, Tuple
+
+from tensorflow.keras import layers, losses, metrics, models, optimizers
 
 
 def build_dnn_model(
@@ -921,9 +924,9 @@ model.summary()
 # 12. Training Callbacks & TensorBoard
 # ========================================
 
-from pathlib import Path
 import datetime
-from typing import Optional, List
+from pathlib import Path
+from typing import List, Optional
 
 
 def create_log_dir(base_dir: Path = LOGS_DIR) -> Path:
@@ -1058,8 +1061,9 @@ history = train_main_model(
 # 13. Evaluation on Test Set + Threshold Tuning
 # ========================================
 
-from sklearn.metrics import roc_auc_score, precision_recall_curve
-from typing import Tuple, Dict
+from typing import Dict, Tuple
+
+from sklearn.metrics import precision_recall_curve, roc_auc_score
 
 
 def predict_probabilities(
@@ -1156,11 +1160,9 @@ best_f1 = threshold_results["best_f1"]
 # 14. Classification Report & Confusion Matrix
 # ========================================
 
-from sklearn.metrics import (
-    classification_report,
-    confusion_matrix
-)
 from typing import Dict
+
+from sklearn.metrics import classification_report, confusion_matrix
 
 
 def evaluate_classification(
@@ -1211,9 +1213,10 @@ classification_results = evaluate_classification(
 # 15. Training Curves (Loss, AUC, Precision, Recall)
 # ========================================
 
+from typing import List
+
 import matplotlib.pyplot as plt
 import pandas as pd
-from typing import List
 
 
 def plot_training_curves(history: tf.keras.callbacks.History,
@@ -1266,9 +1269,10 @@ plot_training_curves(history)
 # 16. ROC & Precision-Recall Curves
 # ========================================
 
-from sklearn.metrics import RocCurveDisplay, PrecisionRecallDisplay
 from typing import Optional
+
 import matplotlib.pyplot as plt
+from sklearn.metrics import PrecisionRecallDisplay, RocCurveDisplay
 
 
 def plot_roc_pr_curves(
@@ -1325,6 +1329,7 @@ plot_roc_pr_curves(y_true=y_test_array, y_prob=y_probabilities)
 # ========================================
 
 from pathlib import Path
+
 import tensorflow as tf
 
 
@@ -1404,10 +1409,11 @@ saved_model_path = export_saved_model(loaded_model)
 # 18. Monitoring / Prediction Drift Simulation
 # ========================================
 
-import numpy as np
-import matplotlib.pyplot as plt
-import tensorflow as tf
 from typing import Dict, Optional
+
+import matplotlib.pyplot as plt
+import numpy as np
+import tensorflow as tf
 
 
 def simulate_production_batch(

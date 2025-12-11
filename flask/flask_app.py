@@ -8,7 +8,8 @@ import numpy as np
 import pandas as pd
 import requests
 import tensorflow as tf
-from sklearn.metrics import accuracy_score, f1_score, precision_score, recall_score
+from sklearn.metrics import (accuracy_score, f1_score, precision_score,
+                             recall_score)
 
 from flask import Flask, jsonify, request
 

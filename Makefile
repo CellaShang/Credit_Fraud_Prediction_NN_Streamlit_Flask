@@ -4,14 +4,13 @@
 help:
 	@echo "Available targets:"
 	@echo "  lint                  Run flake8 (non-blocking)"
-	@echo "  format                Run black + isort (auto-fix, non-blocking)"
+	@echo "  format                Run black + isort (non-blocking)"
 	@echo "  install-dev           Install dev requirements + pre-commit hooks"
 	@echo "  build-<service>       Build Docker image for a service (flask, ui, serving, tensorboard)"
 	@echo "  push-<service>        Push Docker image for a service"
 	@echo "  deploy-<service>      Deploy a service to Cloud Run"
-	@echo "  rollback-<service>    Rollback a service to previous revision"
-	@echo "  pipeline-<service>    Full safe pipeline for a service"
-	@echo "  pipeline-all          Run all service pipelines sequentially"
+	@echo "  rollback-<service>    Rollback a service manually"
+	@echo "  pipeline-<service>    Full pipeline per service"
 
 # ------------------------------
 # Variables
@@ -25,20 +24,46 @@ SERVING_IMAGE=gcr.io/$(PROJECT_ID)/fraud-serving
 TENSORBOARD_IMAGE=gcr.io/$(PROJECT_ID)/tensorboard
 
 # ------------------------------
-# Code Quality (Auto-fix + Non-blocking Lint)
+# Auth Checks
 # ------------------------------
+check-gcloud-auth:
+	@echo "Checking gcloud authentication..."
+	@gcloud auth list --filter=status:ACTIVE --format="value(account)" >/dev/null || (echo "No active gcloud account. Run 'gcloud auth login'" && exit 1)
+	@echo "gcloud authentication OK."
 
+check-docker-auth:
+	@echo "Checking Docker access to GCR..."
+	@docker info >/dev/null || (echo "Docker not running or not accessible" && exit 1)
+	@gcloud auth configure-docker >/dev/null
+	@echo "Docker authentication OK."
+
+check-gcloud-project:
+	@CURRENT_PROJECT=$$(gcloud config get-value project) ; \
+	if [ "$$CURRENT_PROJECT" != "$(PROJECT_ID)" ]; then \
+	  echo "Current gcloud project is $$CURRENT_PROJECT, expected $(PROJECT_ID). Aborting." ; exit 1 ; \
+	else \
+	  echo "Gcloud project verified: $$CURRENT_PROJECT" ; \
+	fi
+
+check-ui-secrets:
+	@echo "Checking secrets for UI..."
+	@gcloud secrets versions access latest --secret=gcs-service-account-key >/dev/null || (echo "UI secret not accessible. Aborting." && exit 1)
+	@echo "UI secrets verified."
+
+# ------------------------------
+# Code Quality
+# ------------------------------
 format:
 	@echo "Running Black auto-fix..."
 	black . || true
 	@echo "Running isort auto-fix..."
 	isort . || true
-	@echo "Formatting completed (errors ignored to continue pipeline)."
+	@echo "Formatting done (errors ignored)."
 
 lint:
-	@echo "Running flake8 (non-blocking)..."
+	@echo "Running flake8..."
 	flake8 . || true
-	@echo "Lint completed (errors ignored to continue pipeline)."
+	@echo "Lint done (errors ignored)."
 
 install-dev:
 	pip install -r requirements-dev.txt
@@ -59,8 +84,6 @@ build-serving:
 build-tensorboard:
 	docker build -t $(TENSORBOARD_IMAGE) tensorboard/
 
-build-all: build-flask build-ui build-serving build-tensorboard
-
 # ------------------------------
 # Docker Push
 # ------------------------------
@@ -75,8 +98,6 @@ push-serving:
 
 push-tensorboard:
 	docker push $(TENSORBOARD_IMAGE)
-
-push-all: push-flask push-ui push-serving push-tensorboard
 
 # ------------------------------
 # Deploy Cloud Run
@@ -114,35 +135,33 @@ deploy-tensorboard:
 		--allow-unauthenticated \
 		--memory 1Gi
 
-deploy-all: deploy-flask deploy-ui deploy-serving deploy-tensorboard
-
 # ------------------------------
-# Rollback
+# Rollback (manual, time/version-based)
 # ------------------------------
 rollback-flask:
-	@echo "Rolling back Flask..."
+	@echo "Listing revisions for Flask..."
 	gcloud run revisions list fraud-api --platform managed --region $(REGION)
-	@echo "Use 'gcloud run services update-traffic fraud-api --to-revisions=<REVISION>:100' manually if needed"
+	@echo "Use: gcloud run services update-traffic fraud-api --to-revisions=<REVISION>:100"
 
 rollback-ui:
-	@echo "Rolling back UI..."
+	@echo "Listing revisions for UI..."
 	gcloud run revisions list fraud-ui --platform managed --region $(REGION)
-	@echo "Use 'gcloud run services update-traffic fraud-ui --to-revisions=<REVISION>:100' manually if needed"
+	@echo "Use: gcloud run services update-traffic fraud-ui --to-revisions=<REVISION>:100"
 
 rollback-serving:
-	@echo "Rolling back TF Serving..."
+	@echo "Listing revisions for TF Serving..."
 	gcloud run revisions list fraud-serving --platform managed --region $(REGION)
-	@echo "Use 'gcloud run services update-traffic fraud-serving --to-revisions=<REVISION>:100' manually if needed"
+	@echo "Use: gcloud run services update-traffic fraud-serving --to-revisions=<REVISION>:100"
 
 rollback-tensorboard:
-	@echo "Rolling back Tensorboard..."
+	@echo "Listing revisions for TensorBoard..."
 	gcloud run revisions list tensorboard --platform managed --region $(REGION)
-	@echo "Use 'gcloud run services update-traffic tensorboard --to-revisions=<REVISION>:100' manually if needed"
+	@echo "Use: gcloud run services update-traffic tensorboard --to-revisions=<REVISION>:100"
 
 # ------------------------------
-# Full Safe Pipeline (per service)
+# Full Service Pipelines
 # ------------------------------
-pipeline-flask:
+pipeline-flask: check-gcloud-auth check-docker-auth check-gcloud-project
 	$(MAKE) lint format
 	$(MAKE) build-flask
 	$(MAKE) push-flask
@@ -151,9 +170,9 @@ pipeline-flask:
 		--region $(REGION) \
 		--platform managed \
 		--allow-unauthenticated \
-		--memory 1Gi || $(MAKE) rollback-flask
+		--memory 1Gi || true
 
-pipeline-ui:
+pipeline-ui: check-gcloud-auth check-docker-auth check-gcloud-project check-ui-secrets
 	$(MAKE) lint format
 	$(MAKE) build-ui
 	$(MAKE) push-ui
@@ -162,9 +181,10 @@ pipeline-ui:
 		--region $(REGION) \
 		--platform managed \
 		--allow-unauthenticated \
-		--memory 1Gi || $(MAKE) rollback-ui
+		--memory 1Gi \
+		--set-secrets "/secrets/gcs_service_account.json=gcs-service-account-key:latest" || true
 
-pipeline-serving:
+pipeline-serving: check-gcloud-auth check-docker-auth check-gcloud-project
 	$(MAKE) lint format
 	$(MAKE) build-serving
 	$(MAKE) push-serving
@@ -173,9 +193,9 @@ pipeline-serving:
 		--region $(REGION) \
 		--platform managed \
 		--allow-unauthenticated \
-		--memory 2Gi || $(MAKE) rollback-serving
+		--memory 2Gi || true
 
-pipeline-tensorboard:
+pipeline-tensorboard: check-gcloud-auth check-docker-auth check-gcloud-project
 	$(MAKE) lint format
 	$(MAKE) build-tensorboard
 	$(MAKE) push-tensorboard
@@ -184,6 +204,11 @@ pipeline-tensorboard:
 		--region $(REGION) \
 		--platform managed \
 		--allow-unauthenticated \
-		--memory 1Gi || $(MAKE) rollback-tensorboard
+		--memory 1Gi || true
 
+
+# ------------------------------
+# Full Pipeline (All Services Sequentially)
+# ------------------------------
 pipeline-all: pipeline-flask pipeline-ui pipeline-serving pipeline-tensorboard
+	@echo "All services pipeline completed."

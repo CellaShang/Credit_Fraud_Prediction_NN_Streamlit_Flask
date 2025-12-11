@@ -1,12 +1,14 @@
-import streamlit as st
+import io
+import logging
+import os
+
+import numpy as np
 import pandas as pd
 import requests
-import numpy as np
-import logging
 from google.cloud import storage
 from google.oauth2 import service_account
-import io
-import os
+
+import streamlit as st
 
 # -----------------------------
 # Setup logging
