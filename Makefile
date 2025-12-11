@@ -87,7 +87,6 @@ deploy-flask:
 		--region $(REGION) \
 		--platform managed \
 		--allow-unauthenticated \
-		--port 8080 \
 		--memory 1Gi
 
 deploy-ui:
@@ -96,8 +95,8 @@ deploy-ui:
 		--region $(REGION) \
 		--platform managed \
 		--allow-unauthenticated \
-		--port 8501 \
-		--memory 1Gi
+		--memory 1Gi \
+		--set-secrets "/secrets/gcs_service_account.json=gcs-service-account-key:latest"
 
 deploy-serving:
 	gcloud run deploy fraud-serving \
@@ -105,7 +104,6 @@ deploy-serving:
 		--region $(REGION) \
 		--platform managed \
 		--allow-unauthenticated \
-		--port 8500 \
 		--memory 2Gi
 
 deploy-tensorboard:
@@ -114,7 +112,6 @@ deploy-tensorboard:
 		--region $(REGION) \
 		--platform managed \
 		--allow-unauthenticated \
-		--port 6006 \
 		--memory 1Gi
 
 deploy-all: deploy-flask deploy-ui deploy-serving deploy-tensorboard
@@ -154,7 +151,6 @@ pipeline-flask:
 		--region $(REGION) \
 		--platform managed \
 		--allow-unauthenticated \
-		--port 8080 \
 		--memory 1Gi || $(MAKE) rollback-flask
 
 pipeline-ui:
@@ -166,7 +162,6 @@ pipeline-ui:
 		--region $(REGION) \
 		--platform managed \
 		--allow-unauthenticated \
-		--port 8501 \
 		--memory 1Gi || $(MAKE) rollback-ui
 
 pipeline-serving:
@@ -178,7 +173,6 @@ pipeline-serving:
 		--region $(REGION) \
 		--platform managed \
 		--allow-unauthenticated \
-		--port 8500 \
 		--memory 2Gi || $(MAKE) rollback-serving
 
 pipeline-tensorboard:
@@ -190,7 +184,6 @@ pipeline-tensorboard:
 		--region $(REGION) \
 		--platform managed \
 		--allow-unauthenticated \
-		--port 6006 \
 		--memory 1Gi || $(MAKE) rollback-tensorboard
 
 pipeline-all: pipeline-flask pipeline-ui pipeline-serving pipeline-tensorboard
