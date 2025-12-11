@@ -1,214 +1,209 @@
-# ------------------------------
-# Help
-# ------------------------------
-help:
-	@echo "Available targets:"
-	@echo "  lint                  Run flake8 (non-blocking)"
-	@echo "  format                Run black + isort (non-blocking)"
-	@echo "  install-dev           Install dev requirements + pre-commit hooks"
-	@echo "  build-<service>       Build Docker image for a service (flask, ui, serving, tensorboard)"
-	@echo "  push-<service>        Push Docker image for a service"
-	@echo "  deploy-<service>      Deploy a service to Cloud Run"
-	@echo "  rollback-<service>    Rollback a service manually"
-	@echo "  pipeline-<service>    Full pipeline per service"
+# Credit Card Fraud Detection System
 
-# ------------------------------
-# Variables
-# ------------------------------
-PROJECT_ID=credit2025
-REGION=us-central1
+This repository contains a cloud-native credit card fraud detection platform built using:
 
-FLASK_IMAGE=gcr.io/$(PROJECT_ID)/fraud-api
-UI_IMAGE=gcr.io/$(PROJECT_ID)/fraud-ui
-SERVING_IMAGE=gcr.io/$(PROJECT_ID)/fraud-serving
-TENSORBOARD_IMAGE=gcr.io/$(PROJECT_ID)/tensorboard
+- **TensorFlow Neural Network** for fraud detection  
+- **Flask REST API** for serving predictions  
+- **Streamlit Web UI** for single and batch transaction predictions  
+- **TensorFlow Serving** for high-performance model inference  
+- **TensorBoard** for monitoring model metrics  
+- **Docker** and **Google Cloud Run** for containerized deployment  
+- **GitHub Actions CI/CD** for automated build and deployment  
 
-# ------------------------------
-# Auth Checks
-# ------------------------------
-check-gcloud-auth:
-	@echo "Checking gcloud authentication..."
-	@gcloud auth list --filter=status:ACTIVE --format="value(account)" >/dev/null || (echo "No active gcloud account. Run 'gcloud auth login'" && exit 1)
-	@echo "gcloud authentication OK."
+The system is fully containerized, scalable, and provides real-time prediction and monitoring capabilities.
 
-check-docker-auth:
-	@echo "Checking Docker access to GCR..."
-	@docker info >/dev/null || (echo "Docker not running or not accessible" && exit 1)
-	@gcloud auth configure-docker >/dev/null
-	@echo "Docker authentication OK."
+**Live Services:**  
+- Streamlit App: [https://fraud-ui-447240734112.us-central1.run.app](https://fraud-ui-447240734112.us-central1.run.app)  
+- Real-time Monitoring: [https://tensorboard-447240734112.us-central1.run.app](https://tensorboard-447240734112.us-central1.run.app)  
 
-check-gcloud-project:
-	@CURRENT_PROJECT=$$(gcloud config get-value project) ; \
-	if [ "$$CURRENT_PROJECT" != "$(PROJECT_ID)" ]; then \
-	  echo "Current gcloud project is $$CURRENT_PROJECT, expected $(PROJECT_ID). Aborting." ; exit 1 ; \
-	else \
-	  echo "Gcloud project verified: $$CURRENT_PROJECT" ; \
-	fi
+---
 
-check-ui-secrets:
-	@echo "Checking secrets for UI..."
-	@gcloud secrets versions access latest --secret=gcs-service-account-key >/dev/null || (echo "UI secret not accessible. Aborting." && exit 1)
-	@echo "UI secrets verified."
+## Project Structure
 
-# ------------------------------
-# Code Quality
-# ------------------------------
-format:
-	@echo "Running Black auto-fix..."
-	black . || true
-	@echo "Running isort auto-fix..."
-	isort . || true
-	@echo "Formatting done (errors ignored)."
+All files are at the root of the repository:
 
-lint:
-	@echo "Running flake8..."
-	flake8 . || true
-	@echo "Lint done (errors ignored)."
+├── flask/ # Flask API backend
+│ ├── flask_app.py
+│ ├── requirements.txt
+│ ├── start.sh
+│ └── Dockerfile
+├── streamlit/ # Streamlit UI
+│ ├── app.py
+│ ├── requirements.txt
+│ ├── start.sh
+│ └── Dockerfile
+├── tf_serving/ # TensorFlow Serving container
+│ ├── Dockerfile
+│ └── saved_model/ # Exported TensorFlow SavedModel
+├── tensorboard/ # TensorBoard container
+│ ├── Dockerfile
+├── model_training/ # Neural Network Training scripts
+│ └── model_training.py
+├── Makefile # Standardized build and deployment commands
+├── .github/workflows/ # CI/CD pipeline
+├── pre-commit-config.yaml
+├── requirements-dev.txt
+└── .gitignore
 
-install-dev:
-	pip install -r requirements-dev.txt
-	pre-commit install
+yaml
+Copy code
 
-# ------------------------------
-# Docker Build
-# ------------------------------
-build-flask:
-	docker build -t $(FLASK_IMAGE) flask/
+---
 
-build-ui:
-	docker build -t $(UI_IMAGE) streamlit/
+## Prerequisites
 
-build-serving:
-	docker build -t $(SERVING_IMAGE) tf_serving/
+- Python 3.11+  
+- Docker  
+- Git  
+- (Optional, for cloud deployment) Google Cloud SDK (`gcloud`) and a GCP project with:  
+  - Cloud Run enabled  
+  - Artifact Registry or GCR  
+  - Service account with Cloud Run and Storage access  
 
-build-tensorboard:
-	docker build -t $(TENSORBOARD_IMAGE) tensorboard/
+> **Note:** Cloud deployment steps are for documentation only. Readers **cannot deploy using my GCP project or secrets**.
 
-# ------------------------------
-# Docker Push
-# ------------------------------
-push-flask:
-	docker push $(FLASK_IMAGE)
+---
 
-push-ui:
-	docker push $(UI_IMAGE)
+## Setup and Local Deployment
 
-push-serving:
-	docker push $(SERVING_IMAGE)
+### 1. Clone Repository
+```bash
+git clone https://github.com/CellaShang/Credit_Fraud_Prediction_NN_Streamlit_Flask.git
+cd Credit_Fraud_Prediction_NN_Streamlit_Flask
+2. Create Python Environment and Install Dependencies
+bash
+Copy code
+# Create and activate virtual environment
+python -m venv venv
+source venv/bin/activate  # Linux/Mac
+venv\Scripts\activate     # Windows
 
-push-tensorboard:
-	docker push $(TENSORBOARD_IMAGE)
+# Install dependencies
+pip install -r flask/requirements.txt
+pip install -r streamlit/requirements.txt
 
-# ------------------------------
-# Deploy Cloud Run
-# ------------------------------
-deploy-flask:
-	gcloud run deploy fraud-api \
-		--image $(FLASK_IMAGE) \
-		--region $(REGION) \
-		--platform managed \
-		--allow-unauthenticated \
-		--memory 1Gi
+# Optional dev setup
+pip install -r requirements-dev.txt
+pre-commit install
+3. Run Services Locally
+Option A: Run manually
+bash
+Copy code
+# Flask API
+cd flask
+python flask_app.py
 
-deploy-ui:
-	gcloud run deploy fraud-ui \
-		--image $(UI_IMAGE) \
-		--region $(REGION) \
-		--platform managed \
-		--allow-unauthenticated \
-		--memory 1Gi \
-		--set-secrets "/secrets/gcs_service_account.json=gcs-service-account-key:latest"
+# Streamlit UI
+cd ../streamlit
+streamlit run app.py
 
-deploy-serving:
-	gcloud run deploy fraud-serving \
-		--image $(SERVING_IMAGE) \
-		--region $(REGION) \
-		--platform managed \
-		--allow-unauthenticated \
-		--memory 2Gi
+# TensorBoard (optional)
+cd ../tensorboard
+tensorboard --logdir logs --port 6006
+Option B: Using Docker (fully reproducible)
+bash
+Copy code
+# Build Docker images locally
+make build-flask
+make build-ui
+make build-serving
+make build-tensorboard
 
-deploy-tensorboard:
-	gcloud run deploy tensorboard \
-		--image $(TENSORBOARD_IMAGE) \
-		--region $(REGION) \
-		--platform managed \
-		--allow-unauthenticated \
-		--memory 1Gi
+# Run containers locally
+docker run -p 8080:8080 gcr.io/credit2025/fraud-api
+docker run -p 8081:8080 gcr.io/credit2025/fraud-ui
+docker run -p 8501:8080 gcr.io/credit2025/fraud-serving
+docker run -p 6006:6006 gcr.io/credit2025/tensorboard
+Works locally, no GCP credentials required.
 
-# ------------------------------
-# Rollback (manual, time/version-based)
-# ------------------------------
-rollback-flask:
-	@echo "Listing revisions for Flask..."
-	gcloud run revisions list fraud-api --platform managed --region $(REGION)
-	@echo "Use: gcloud run services update-traffic fraud-api --to-revisions=<REVISION>:100"
+Cloud Deployment (Documentation Only)
+Important: Cannot be run without your own GCP project and credentials. This is for reference only.
 
-rollback-ui:
-	@echo "Listing revisions for UI..."
-	gcloud run revisions list fraud-ui --platform managed --region $(REGION)
-	@echo "Use: gcloud run services update-traffic fraud-ui --to-revisions=<REVISION>:100"
+1. Set Environment Variables
+bash
+Copy code
+export PROJECT_ID=<YOUR_GCP_PROJECT>
+export REGION=us-central1
+2. Push Docker Images
+bash
+Copy code
+# Flask API
+docker tag fraud-api gcr.io/$PROJECT_ID/fraud-api:latest
+docker push gcr.io/$PROJECT_ID/fraud-api:latest
 
-rollback-serving:
-	@echo "Listing revisions for TF Serving..."
-	gcloud run revisions list fraud-serving --platform managed --region $(REGION)
-	@echo "Use: gcloud run services update-traffic fraud-serving --to-revisions=<REVISION>:100"
+# Streamlit UI
+docker tag fraud-ui gcr.io/$PROJECT_ID/fraud-ui:latest
+docker push gcr.io/$PROJECT_ID/fraud-ui:latest
 
-rollback-tensorboard:
-	@echo "Listing revisions for TensorBoard..."
-	gcloud run revisions list tensorboard --platform managed --region $(REGION)
-	@echo "Use: gcloud run services update-traffic tensorboard --to-revisions=<REVISION>:100"
+# TensorFlow Serving
+docker tag fraud-serving us-central1-docker.pkg.dev/$PROJECT_ID/fraud-ml/fraud-serving:latest
+docker push us-central1-docker.pkg.dev/$PROJECT_ID/fraud-ml/fraud-serving:latest
 
-# ------------------------------
-# Full Service Pipelines
-# ------------------------------
-pipeline-flask: check-gcloud-auth check-docker-auth check-gcloud-project
-	$(MAKE) lint format
-	$(MAKE) build-flask
-	$(MAKE) push-flask
-	-gcloud run deploy fraud-api \
-		--image $(FLASK_IMAGE) \
-		--region $(REGION) \
-		--platform managed \
-		--allow-unauthenticated \
-		--memory 1Gi || true
+# TensorBoard
+docker tag tensorboard gcr.io/$PROJECT_ID/tensorboard:latest
+docker push gcr.io/$PROJECT_ID/tensorboard:latest
+3. Deploy to Cloud Run
+bash
+Copy code
+# Flask API
+gcloud run deploy fraud-api \
+  --image gcr.io/$PROJECT_ID/fraud-api:latest \
+  --platform managed \
+  --region $REGION \
+  --allow-unauthenticated \
+  --memory 1Gi
 
-pipeline-ui: check-gcloud-auth check-docker-auth check-gcloud-project check-ui-secrets
-	$(MAKE) lint format
-	$(MAKE) build-ui
-	$(MAKE) push-ui
-	-gcloud run deploy fraud-ui \
-		--image $(UI_IMAGE) \
-		--region $(REGION) \
-		--platform managed \
-		--allow-unauthenticated \
-		--memory 1Gi \
-		--set-secrets "/secrets/gcs_service_account.json=gcs-service-account-key:latest" || true
+# Streamlit UI
+gcloud run deploy fraud-ui \
+  --image gcr.io/$PROJECT_ID/fraud-ui:latest \
+  --platform managed \
+  --region $REGION \
+  --allow-unauthenticated \
+  --memory 1Gi \
+  --set-secrets "/secrets/gcs_service_account.json=gcs-service-account-key:latest"
 
-pipeline-serving: check-gcloud-auth check-docker-auth check-gcloud-project
-	$(MAKE) lint format
-	$(MAKE) build-serving
-	$(MAKE) push-serving
-	-gcloud run deploy fraud-serving \
-		--image $(SERVING_IMAGE) \
-		--region $(REGION) \
-		--platform managed \
-		--allow-unauthenticated \
-		--memory 2Gi || true
+# TensorFlow Serving
+gcloud run deploy fraud-serving \
+  --image us-central1-docker.pkg.dev/$PROJECT_ID/fraud-ml/fraud-serving:latest \
+  --platform managed \
+  --region $REGION \
+  --allow-unauthenticated \
+  --memory 2Gi
 
-pipeline-tensorboard: check-gcloud-auth check-docker-auth check-gcloud-project
-	$(MAKE) lint format
-	$(MAKE) build-tensorboard
-	$(MAKE) push-tensorboard
-	-gcloud run deploy tensorboard \
-		--image $(TENSORBOARD_IMAGE) \
-		--region $(REGION) \
-		--platform managed \
-		--allow-unauthenticated \
-		--memory 1Gi || true
+# TensorBoard
+gcloud run deploy tensorboard \
+  --image gcr.io/$PROJECT_ID/tensorboard:latest \
+  --platform managed \
+  --region $REGION \
+  --allow-unauthenticated \
+  --memory 1Gi
+The Makefile automates these steps using make pipeline-<service> or make pipeline-all.
+Readers cannot execute these pipelines without their own GCP project and credentials.
 
+Usage
+Single Transaction Prediction
+Open the Streamlit UI
 
-# ------------------------------
-# Full Pipeline (All Services Sequentially)
-# ------------------------------
-pipeline-all: pipeline-flask pipeline-ui pipeline-serving pipeline-tensorboard
-	@echo "All services pipeline completed."
+Paste 33 feature values into the input fields
+
+Optionally select the true class
+
+Click Predict Single Transaction to get the label and probability
+
+Batch Prediction
+Upload a CSV file or provide a GCS path with multiple transaction records
+
+Click Predict CSV
+
+View results in the UI and optionally download predictions as CSV
+
+Monitoring and Logging
+Flask API: logs predictions, request latency, and errors
+
+TF-Serving: low-latency inference and high-throughput handling
+
+Streamlit UI: logs user interactions and API responses
+
+TensorBoard: tracks accuracy, precision, recall, F1-score, and latency metrics
+
+Cloud Run: monitors CPU, memory, request throughput, and error rates
