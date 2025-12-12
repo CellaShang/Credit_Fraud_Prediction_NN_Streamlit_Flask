@@ -122,7 +122,9 @@ Works locally, no GCP credentials required.
 
 ## Cloud Deployment (Documentation Only)
 
-Important: Cannot be run without your own GCP project and credentials. This is for reference only.
+**Important:** Cannot be run without your own GCP project and credentials. This is for reference only.
+
+**Note:** I provided My_Deploy_Google_Cloud_Steps.cmd. It's a manual way to deploy it to cloud, for your reference. 
 
 ### 1. Set Environment Variables
 ```bash
