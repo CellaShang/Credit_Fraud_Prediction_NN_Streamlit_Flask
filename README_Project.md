@@ -16,6 +16,9 @@ The system is fully containerized, scalable, and provides real-time prediction a
 - Streamlit App: [https://fraud-ui-447240734112.us-central1.run.app](https://fraud-ui-447240734112.us-central1.run.app)  
 - Real-time Monitoring: [https://tensorboard-447240734112.us-central1.run.app](https://tensorboard-447240734112.us-central1.run.app)  
 
+**Note:**
+The data provided to Streamlit is already preprocessed, not raw. This ensures consistency with TensorFlow Serving, where the SavedModel is used directly for predictions.
+
 ---
 
 ## Project Structure
