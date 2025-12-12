@@ -115,9 +115,8 @@ The TensorFlow/Keras pipeline includes:
 
 ## 7. Outputs
 
-- **Processed dataset:** `data/processed/creditcard_subset_100k.csv`  
+- **Processed dataset:** `creditcard_subset_100k.csv,`test.csv, val.csv, train.csv 
 - **Engineered features:** `log_amount`, `hour`, `is_night`  
 - **EDA visualizations:** class distribution, boxplots, KDE plots, correlation heatmap  
 - **Trained models:** stored in `models/`  
-- **Logs:** TensorBoard metrics in `logs/`  
 
