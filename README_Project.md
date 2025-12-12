@@ -237,4 +237,4 @@ In a Cloud Run deployment, the filesystem is ephemeral, so any SQLite database c
 
 ## Notes
 
-- For **model training and data science workflow**, see the separate [README_Model_Training](../README.md).  
+- For **model training and data science workflow**, see the separate [README_Model_Training](../README_Model_Training.md).  
