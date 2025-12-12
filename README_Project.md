@@ -106,11 +106,11 @@ tensorboard --logdir logs --port 6006
 ```
 **Option B: Using Docker (fully reproducible)**
 ```bash
-# Build Docker images locally
-make build-flask
-make build-ui
-make build-serving
-make build-tensorboard
+# Build Docker images locally (OR you can use make following the Makefile helper)
+docker build -t fraud-api ./flask
+docker build -t fraud-ui ./streamlit
+docker build -t fraud-serving ./fraud-serving
+docker build -t tensorboard ./tensorboard
 
 # Run containers locally
 docker run -p 8080:8080 gcr.io/credit2025/fraud-api
@@ -210,9 +210,28 @@ Readers cannot execute these pipelines without their own GCP project and credent
 - TensorBoard: tracks accuracy, precision, recall, F1-score, and latency metrics  
 - Cloud Run: monitors CPU, memory, request throughput, and error rates  
 
+## SQLite Logs – Local vs Cloud Deployment
+
+The system uses a **SQLite database** to log predictions, request latency, and evaluation metrics for monitoring purposes. The database stores:
+
+- `logs`: individual prediction requests (`timestamp`, `latency`, `prediction`, `probability`, `true_class`)  
+- `batch_metrics`: aggregated performance per batch (`num_samples`, `avg_probability`, `accuracy`, `precision`, `recall`, `f1_score`)  
+- `alerts`: metrics that violate predefined thresholds  
+- `actions`: recommended follow-up actions for alerts  
+
+#### Local Deployment
+When running the system locally, the SQLite file is stored in the Flask project directory:
+
+```text
+flask/monitoring.db
+```
 View results in the UI and optionally download predictions as CSV
 
+#### Cloud Deployment
 
+In a Cloud Run deployment, the filesystem is ephemeral, so any SQLite database created by the Flask container is temporary and disappears when the container restarts. To safely inspect recent predictions without touching the production deployment:
+
+---
 
 ## Notes
 
