@@ -32,6 +32,8 @@ The training workflow is designed for reproducibility and portability across loc
 ## 2. Dataset Acquisition
 
 **Dataset:** [Kaggle – Credit Card Fraud Detection](https://www.kaggle.com/datasets/mlg-ulb/creditcardfraud)  
+**Note** that when running the model_training/model_training.py, you are expected to input your Kaggle account and password.
+
 - 284,807 transactions (European cardholders, September 2013)  
 - Features:  
   - `Time` → seconds since first transaction  
