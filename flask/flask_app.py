@@ -254,6 +254,21 @@ def predict():
         traceback.print_exc()
         return jsonify({"error": str(e)}), 500
 
+# -----------------------------
+# Debug / Monitor endpoint
+# -----------------------------
+@app.route("/debug/monitor", methods=["GET"])
+def debug_monitor():
+    # List of tables to display
+    tables = ["logs", "batch_metrics", "alerts", "actions"]
+    html = "<h1>Monitoring DB Preview</h1>"
+
+    for table in tables:
+        df = pd.read_sql_query(f"SELECT * FROM {table} LIMIT 50", conn)
+        html += f"<h2>Table: {table}</h2>"
+        html += df.to_html(index=False, border=1, classes="dataframe")
+    
+    return html
 
 # -----------------------------
 # Run Flask
